@@ -1,0 +1,5 @@
+name: FarmingPluginTrial
+version: 1.0
+author: NightOfTheWind
+main: main.java.org.farmingplugin.farmingPlugin.FarmingPlugin
+api-version: 29

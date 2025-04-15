@@ -1,0 +1,3 @@
+org\farmingplugin\farmingPlugin\events\FarmEvents.class
+org\farmingplugin\farmingPlugin\FarmingPlugin.class
+org\farmingplugin\farmingPlugin\commands\CropTramplingCommand.class

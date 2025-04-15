@@ -1,0 +1,10 @@
+name: FarmingPlugin
+version: '1.0-SNAPSHOT'
+main: org.farmingplugin.farmingPlugin.FarmingPlugin
+api-version: '1.21'
+
+commands:
+  toggletrampling:
+    description: Toggle crop trampling for a player.
+    usage: /<command>
+    aliases: togglecroptrampling
