@@ -159,7 +159,6 @@ public class FarmEvents implements Listener {
 
         int currDmg = durability.getDamage();
         durability.setDamage(currDmg + 1);
-        player.sendMessage("§eDamage: " + currDmg);
 
         if (currDmg >= hoe.getType().getMaxDurability())
             player.getInventory().remove(hoe);
@@ -227,7 +226,6 @@ public class FarmEvents implements Listener {
 
         // Spawn gold carrot logic
         double goldCarrotChance = (100/goldCarrotRnd);
-        player.sendMessage(qualify + " " + goldCarrotChance + " " + goldCarrotRnd);
         if (qualify >= goldCarrotChance && cropName.equals("CARROTS"))
         {
             crop.getWorld().dropItemNaturally(crop.getLocation(), new ItemStack(Material.GOLDEN_CARROT, 1));
