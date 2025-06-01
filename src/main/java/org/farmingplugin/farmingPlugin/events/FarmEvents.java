@@ -2,18 +2,24 @@ package org.farmingplugin.farmingPlugin.events;
 
 import org.bukkit.Material;
 import org.bukkit.block.Block;
+import org.bukkit.block.BlockFace;
+import org.bukkit.block.data.Ageable;
+import org.bukkit.block.data.BlockData;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.block.BlockFromToEvent;
 import org.bukkit.event.block.BlockPistonExtendEvent;
+import org.bukkit.event.entity.EntityExplodeEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.Damageable;
 import org.farmingplugin.farmingPlugin.FarmingPlugin;
 
+import java.util.Iterator;
 import java.util.Random;
 import java.util.UUID;
 
@@ -25,13 +31,53 @@ public class FarmEvents implements Listener {
         FarmEvents.plugin = plugin;
     }
 
+    @EventHandler // Makes crops not drop anything with blown up
+    public static void onCropsBlownUp(EntityExplodeEvent event)
+    {
+        // get iterator from list of blocks that would be destroyed
+        Iterator<Block> it = event.blockList().iterator();
+
+        while (it.hasNext()) // while the list still has things in it
+        {
+            Block block = it.next(); // get the first element the first time you call this
+            if (CanFarm(block.getType().toString()))
+            {
+                block.setType(Material.AIR); // turn crop into air
+                it.remove(); // remove it from list
+            }
+        }
+    }
+
+    @EventHandler   // Makes crops not drop anything when destroyed with water
+    public static void onWaterBreaksCrop(BlockFromToEvent event)
+    {
+        Block block = event.getToBlock(); // Get the block (the crop)
+
+        // If the block can be farmed then turn it into air and cancel the drop item event
+        if (CanFarm(block.getType().toString()))
+        {
+            block.setType(Material.AIR);
+            event.setCancelled(true);
+        }
+    }
+
+
     @EventHandler // Stop pistons from pushing crops
     public static void onPistonCropBreak(BlockPistonExtendEvent event)
     {
         for (Block block : event.getBlocks())
         {
-            if (CanFarm(block.getType().toString()))
+            if (CanFarm(block.getType().toString()) || block.getType() == Material.FARMLAND)
+            {
                 event.setCancelled(true);
+                return;
+            }
+            Block above = block.getRelative(BlockFace.UP);
+            if (CanFarm(above.getType().toString()))
+            {
+                event.setCancelled(true);
+                return;
+            }
         }
     }
 
@@ -110,46 +156,61 @@ public class FarmEvents implements Listener {
         }
     }
 
+    // Set values for what the crop will drop and drop it, then destroy block
     private static void UseHoe(Player player, ItemStack hoe, Block crop, String cropName)
     {
-        int seedYield = 0;
-        int cropYield = 0;
+        // Check if the crop is ripe (not using CropState enum since it's deprecated)
+        final BlockData blockData = crop.getBlockData();
+        if (blockData instanceof Ageable)
+        {
+            final Ageable cropAge = (Ageable)blockData;
+            if (cropAge.getAge() == cropAge.getMaximumAge()) // if it's ripe let player use the hoe
+            {
+                int seedYield = 0;
+                int cropYield = 0;
 
-        switch (hoe.getType().name()) { // Check what type of hoe they're using
-            case "WOODEN_HOE", "STONE_HOE" -> {
-                seedYield = 1;
-                cropYield = 1;
-            }
-            case "IRON_HOE", "GOLDEN_HOE" -> {
-                seedYield = 2;
-                cropYield = 2;
-            }
-            case "DIAMOND_HOE", "NETHERITE_HOE" -> {
-                seedYield = 3;
-                cropYield = 3;
+                switch (hoe.getType().name()) { // Check what type of hoe they're using
+                    case "WOODEN_HOE", "STONE_HOE" -> {
+                        seedYield = 1;
+                        cropYield = 1;
+                    }
+                    case "IRON_HOE", "GOLDEN_HOE" -> {
+                        seedYield = 2;
+                        cropYield = 2;
+                    }
+                    case "DIAMOND_HOE", "NETHERITE_HOE" -> {
+                        seedYield = 3;
+                        cropYield = 3;
+                    }
+                }
+
+
+
+                DropCrop(player, cropYield, seedYield, crop, cropName, hoe);
+
+                crop.setType(Material.AIR); // Destroy block
             }
         }
 
-        DropCrop(player, cropYield, seedYield, crop, cropName, hoe);
-        
-        crop.setType(Material.AIR); // Destroy block
+
     }
 
     // Check if the block is a farm-able crop; takes in the block's name as a parameter
     private static boolean CanFarm(String cropName)
     {
-        return cropName.equals("WHEAT") || cropName.equals("CARROTS")
-                || cropName.equals("POTATOES") || cropName.equals("BEETROOTS");
+        return cropName.equals("WHEAT")
+                || cropName.equals("CARROTS")
+                || cropName.equals("POTATOES")
+                || cropName.equals("BEETROOTS");
     }
     // Check if block can be turned into farmland
     private static boolean CanTill(Block block)
     {
         String blockName = block.getType().name();
-        if (blockName.equals("DIRT") || blockName.equals("GRASS_BLOCK")
-                || blockName.equals("COARSE_DIRT") || blockName.equals("DIRT_PATH"))
-            return true;
-        else
-            return false;
+        return blockName.equals("DIRT")
+                || blockName.equals("GRASS_BLOCK")
+                || blockName.equals("COARSE_DIRT")
+                || blockName.equals("DIRT_PATH");
     }
 
     // Method that depletes a Minecraft hoe's durability by one when it is used
